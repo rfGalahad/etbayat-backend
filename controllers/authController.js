@@ -7,7 +7,6 @@ export const registerBatch = async (req, res) => {
 
   const connection = await pool.getConnection();
   const accounts = req.body;
-  console.log('Accounts', accounts);
   // const hash = await bcrypt.hash(password, 10);
 
   try {
@@ -39,9 +38,9 @@ export const registerBatch = async (req, res) => {
 }
 
 export const addAccount = async (req, res) => {
+
   const connection = await pool.getConnection();
   const newAccount = req.body;
-  console.log('NEW ACCOUNT', newAccount);
   const hash = await bcrypt.hash(newAccount.password, 10);
 
   try {
@@ -70,11 +69,12 @@ export const addAccount = async (req, res) => {
       ]
     );
 
-    return res.status(201).json({ 
-      message: `Account Added!`, 
-      accounts: results 
+    res.status(200).json({ 
+      success: results.affectedRows > 0, 
+      message: 'Account added successfully' 
     });
 
+    
   } catch (err) {
     console.error("Error adding account:", err);
     res.status(500).json({ error: "Error adding account", details: err.message });
@@ -134,6 +134,7 @@ export const manageAccounts = async (req, res) => {
 }
 
 export const deleteAccount = async (req, res) => {
+  
   const connection = await pool.getConnection();
   const userID = req.params.userID;
 

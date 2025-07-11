@@ -1,18 +1,23 @@
-
-
-export const updateSurvey = async (surveyData, connection) => {
+export const updateSurvey = async (surveyData, photo, signature, connection) => {
+  
+  console.log('Photo:', photo ? 'Provided' : 'Not Provided');
+  
   const [result] = await connection.query(
     `UPDATE Surveys 
      SET respondent = ?, 
          interviewer = ?, 
          barangay = ?, 
-         municipality = ?
+         municipality = ?,
+         photo = ?,
+         signature = ?
      WHERE surveyID = ?`,
     [
       surveyData.respondent,
       surveyData.interviewer,
       surveyData.barangay,
       surveyData.municipality,
+      photo || null,
+      signature || null,
       surveyData.surveyID
     ]
   );
@@ -47,8 +52,7 @@ export const updateHousehold = async (surveyData, connection) => {
 
 // POPULATION
 
-
-export const updateFamilyProfile = async (familyMembers, houseLocation, connection) => {
+export const updateFamilyProfile = async (populationID, familyMembers, houseLocation, connection) => {
 
   if (!familyMembers || familyMembers.length === 0) return null;
 
@@ -56,156 +60,317 @@ export const updateFamilyProfile = async (familyMembers, houseLocation, connecti
     if (!date) return null;
     const d = new Date(date);
     if (isNaN(d)) return null;
-    return d.toISOString().split('T')[0]; // returns 'YYYY-MM-DD'
+    return d.toISOString().split('T')[0];
   }
 
-  const updatePromises = familyMembers.map(async (member) => {
+  // Step 1: Get all existing populationIDs for the given surveyID
+  const surveyID = familyMembers[0]?.surveyID;
+  const [existingRows] = await connection.query(
+    'SELECT populationID FROM Population WHERE surveyID = ?',
+    [surveyID]
+  );
+  const existingIDs = existingRows.map(row => row.populationID);
 
-    await connection.query(
-      `UPDATE Population
-       SET healthStatus = ?,
-           remarks = ?
-       WHERE populationID = ? AND surveyID = ?`,
-      [
-        member.healthStatus ,
-        member.remarks ,
-        member.populationID,
-        member.surveyID
-      ]
-    );
+  // Step 2: Get populationIDs from the incoming list
+  const incomingIDs = familyMembers.map(member => member.populationID);
 
-    await connection.query(
-      `UPDATE PersonalInformation
-       SET firstName = ?,
-           middleName = ?,
-           lastName = ?,
-           suffix = ?,
-           birthdate = ?,
-           age = ?,
-           sex = ?,
-           birthplace = ?, 
-           religion = ?,
-           civilStatus = ?,
-           relationToFamilyHead = ?,
-           isOSY = ?,
-           inSchool = ?,
-           outOfTown = ?,
-           isOFW = ?,
-           isPWD = ?, 
-           isSoloParent = ?
-       WHERE personalInfoID = ? AND populationID = ?`,
-      [
-        member.firstName ,
-        member.middleName ,
-        member.lastName ,
-        member.suffix ,
-        member.birthdate ? member.birthdate.split('T')[0] : null,
-        member.age,
-        member.sex,
-        member.birthplace ,
-        member.religion ,
-        member.civilStatus,
-        member.relationToFamilyHead,
-        member.isOSY,
-        member.inSchool,
-        member.outOfTown,
-        member.isOFW,
-        member.isPWD,
-        member.isSoloParent,
-        member.personalInfoID,
-        member.populationID
-      ]
-    );
+  // Step 3: Find IDs to delete
+  const idsToDelete = existingIDs.filter(id => !incomingIDs.includes(id));
 
-    await connection.query(
-      `UPDATE ProfessionalInformation
-       SET educationalAttainment = ?,
-           skills = ?,
-           occupation = ?,
-           employmentType = ?,
-           monthlyIncome = ?
-       WHERE professionalInfoID = ? AND populationID = ?`,
-      [
-        member.educationalAttainment,
-        member.skills ,
-        member.occupation ,
-        member.employmentType ,
-        parseFloat(member.monthlyIncome.replace(/,/g, '').trim())|| 0,
-        member.professionalInfoID,
-        member.populationID,
-        //member.surveyID
-      ]
-    );
+  // Step 4: Delete related records
+  for (const id of idsToDelete) {
+    await connection.query('DELETE FROM NonIvatan WHERE populationID = ?', [id]);
+    await connection.query('DELETE FROM GovernmentAffiliation WHERE populationID = ?', [id]);
+    await connection.query('DELETE FROM GovernmentIDs WHERE populationID = ?', [id]);
+    await connection.query('DELETE FROM ContactInformation WHERE populationID = ?', [id]);
+    await connection.query('DELETE FROM ProfessionalInformation WHERE populationID = ?', [id]);
+    await connection.query('DELETE FROM PersonalInformation WHERE populationID = ?', [id]);
+    await connection.query('DELETE FROM Population WHERE populationID = ?', [id]);
+  }
 
-    await connection.query(
-      `UPDATE ContactInformation
-       SET mobileNumber = ?,
-           street = ?,
-           barangay = ?,
-           municipality = 'Itbayat',
-           province = 'Batanes'
-       WHERE contactInfoID = ? AND populationID = ?`,
-      [
-        member.contactNumber,
-        houseLocation.street,
-        houseLocation.barangay,
-        member.contactInfoID,
-        member.populationID
-      ]
-    );
 
-    await connection.query(
-      `UPDATE GovernmentIDs
-       SET philhealthNumber = ?
-       WHERE govID = ? AND populationID = ?`,
-      [
-        member.philhealthNumber || null,
-        member.govID,
-        member.populationID
-      ]
-    );
+  const updatePromises = familyMembers.map(async (member, index) => {
 
-    await connection.query(
-      `UPDATE GovernmentAffiliation
-       SET isAffiliated = ?,
-           asOfficer = ?,
-           asMember = ?,
-           organizationAffiliated = ?
-       WHERE governmentAffiliationID = ? AND populationID = ?`,
-      [
-        member.isAffiliated,
-        formatDate(member.asOfficer),
-        formatDate(member.asMember),
-        member.organizationAffiliated ,
-        member.governmentAffiliationID,
-        member.populationID
-      ]
-    );
+    console.log(`[ UPDATING ] Family Member ${index + 1} - Population ID: ${member.populationID || 'New'}`);
 
-    await connection.query(
-      `UPDATE NonIvatan
-       SET isIpula = ?,
-           settlementDetails = ?,
-           ethnicity = ?,
-           placeOfOrigin = ?,
-           isTransient = ?,
-           houseOwner = ?,
-           isRegistered = ?,
-           dateRegistered = ?
-       WHERE nonIvatanID = ? AND populationID = ?`,
-      [
-        member.isIpula,
-        member.settlementDetails ,
-        member.ethnicity ,
-        member.placeOfOrigin ,
-        member.isTransient,
-        member.houseOwner ,
-        member.transientRegistered,
-        formatDate(member.dateRegistered),
-        member.nonIvatanID,
-        member.populationID
-      ]
-    );
+    const isNew = !member.populationID;
+
+    if(isNew) {
+
+      await connection.query(
+        `INSERT INTO Population
+        (populationID, surveyID, healthStatus, remarks) 
+        VALUES (?, ?, ?, ?)`,
+        [
+          `${populationID}-${index + 1}`,
+          surveyID,
+          member.healthStatus ,
+          member.remarks 
+        ]
+      );
+
+      await connection.query(
+        `INSERT INTO PersonalInformation
+          ( populationID, 
+            firstName, middleName, lastName, suffix,
+            birthdate, age, sex, birthplace,
+            religion, civilStatus, relationToFamilyHead,
+            isOSY, inSchool, outOfTown, isOFW, isPWD, isSoloParent ) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          `${populationID}-${index + 1}`,
+          member.firstName,
+          member.middleName,
+          member.lastName,
+          member.suffix,
+          member.birthdate,
+          member.age || member.formattedAge,
+          member.sex,
+          member.birthplace,
+          member.religion,
+          member.civilStatus,
+          member.relationToFamilyHead,
+          member.isOSY,
+          member.inSchool,
+          member.outOfTown,
+          member.isOFW,
+          member.isPWD,
+          member.isSoloParent
+        ]
+      );
+
+      await connection.query(
+        `INSERT INTO ProfessionalInformation
+          ( populationID, 
+            educationalAttainment,
+            skills,
+            occupation,
+            employmentType,
+            monthlyIncome ) 
+        VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          `${populationID}-${index + 1}`,
+          member.educationalAttainment,
+          member.skills,
+          member.occupation,
+          member.employmentType,
+          parseFloat(member.monthlyIncome.replace(/,/g, '').trim()) || 0
+        ]
+      );
+
+      await connection.query(
+        `INSERT INTO ContactInformation
+        (populationID, mobileNumber, street, barangay, municipality, province) 
+        VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          `${populationID}-${index + 1}`,
+          member.contactNumber,
+          houseLocation.houseStreet,
+          houseLocation.barangay,
+          'Itbayat',
+          'Batanes'
+        ]
+      );
+
+      await connection.query(
+        `INSERT INTO GovernmentIDs
+        ( populationID, 
+          philhealthNumber ) 
+        VALUES (?, ?)`,
+        [
+          `${populationID}-${index + 1}`,
+          member.philhealthNumber || null
+        ]
+      );
+
+      await connection.query(
+        `INSERT INTO GovernmentAffiliation
+        (populationID, isAffiliated, asOfficer, asMember, organizationAffiliated) 
+        VALUES (?, ?, ?, ?, ?)`,
+        [
+          `${populationID}-${index + 1}`,
+          member.isAffiliated,
+          (!member.asOfficer || member.asOfficer === 'N/A' || member.asOfficer.trim() === '')
+            ? null
+            : member.asOfficer.split('T')[0],
+          (!member.asMember || member.asMember === 'N/A' || member.asMember.trim() === '')
+            ? null
+            : member.asMember.split('T')[0],
+          member.organizationAffiliated
+        ]
+      );
+
+      await connection.query(
+        `INSERT INTO NonIvatan
+          (populationID, isIpula, settlementDetails, ethnicity, placeOfOrigin,
+          isTransient, houseOwner, isRegistered, dateRegistered) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          `${populationID}-${index + 1}`,
+          member.isIpula,
+          member.settlementDetails,
+          member.ethnicity,
+          member.placeOfOrigin,
+          member.isTransient ,
+          member.houseOwner,
+          member.transientRegistered,
+          (!member.transientDateRegistered || member.transientDateRegistered === 'N/A' || member.transientDateRegistered.trim() === '')
+            ? null
+            : member.transientDateRegistered.split('T')[0]
+        ]
+      );
+      
+    } else {
+      
+      await connection.query(
+        `UPDATE Population
+        SET healthStatus = ?,
+            remarks = ?
+        WHERE populationID = ? AND surveyID = ?`,
+        [
+          member.healthStatus ,
+          member.remarks ,
+          member.populationID,
+          member.surveyID
+        ]
+      );
+
+      await connection.query(
+        `UPDATE PersonalInformation
+        SET firstName = ?,
+            middleName = ?,
+            lastName = ?,
+            suffix = ?,
+            birthdate = ?,
+            age = ?,
+            sex = ?,
+            birthplace = ?, 
+            religion = ?,
+            civilStatus = ?,
+            relationToFamilyHead = ?,
+            isOSY = ?,
+            inSchool = ?,
+            outOfTown = ?,
+            isOFW = ?,
+            isPWD = ?, 
+            isSoloParent = ?
+        WHERE personalInfoID = ? AND populationID = ?`,
+        [
+          member.firstName ,
+          member.middleName ,
+          member.lastName ,
+          member.suffix ,
+          member.birthdate ? member.birthdate.split('T')[0] : null,
+          member.age,
+          member.sex,
+          member.birthplace ,
+          member.religion ,
+          member.civilStatus,
+          member.relationToFamilyHead,
+          member.isOSY,
+          member.inSchool,
+          member.outOfTown,
+          member.isOFW,
+          member.isPWD,
+          member.isSoloParent,
+          member.personalInfoID,
+          member.populationID
+        ]
+      );
+
+      await connection.query(
+        `UPDATE ProfessionalInformation
+        SET educationalAttainment = ?,
+            skills = ?,
+            occupation = ?,
+            employmentType = ?,
+            monthlyIncome = ?
+        WHERE professionalInfoID = ? AND populationID = ?`,
+        [
+          member.educationalAttainment,
+          member.skills ,
+          member.occupation ,
+          member.employmentType ,
+          parseFloat(member.monthlyIncome.replace(/,/g, '').trim())|| 0,
+          member.professionalInfoID,
+          member.populationID,
+          //member.surveyID
+        ]
+      );
+
+      await connection.query(
+        `UPDATE ContactInformation
+        SET mobileNumber = ?,
+            street = ?,
+            barangay = ?,
+            municipality = 'Itbayat',
+            province = 'Batanes'
+        WHERE contactInfoID = ? AND populationID = ?`,
+        [
+          member.contactNumber,
+          houseLocation.street,
+          houseLocation.barangay,
+          member.contactInfoID,
+          member.populationID
+        ]
+      );
+
+      await connection.query(
+        `UPDATE GovernmentIDs
+        SET philhealthNumber = ?
+        WHERE govID = ? AND populationID = ?`,
+        [
+          member.philhealthNumber || null,
+          member.govID,
+          member.populationID
+        ]
+      );
+
+      await connection.query(
+        `UPDATE GovernmentAffiliation
+        SET isAffiliated = ?,
+            asOfficer = ?,
+            asMember = ?,
+            organizationAffiliated = ?
+        WHERE governmentAffiliationID = ? AND populationID = ?`,
+        [
+          member.isAffiliated,
+          formatDate(member.asOfficer),
+          formatDate(member.asMember),
+          member.organizationAffiliated ,
+          member.governmentAffiliationID,
+          member.populationID
+        ]
+      );
+
+      await connection.query(
+        `UPDATE NonIvatan
+        SET isIpula = ?,
+            settlementDetails = ?,
+            ethnicity = ?,
+            placeOfOrigin = ?,
+            isTransient = ?,
+            houseOwner = ?,
+            isRegistered = ?,
+            dateRegistered = ?
+        WHERE nonIvatanID = ? AND populationID = ?`,
+        [
+          member.isIpula,
+          member.settlementDetails ,
+          member.ethnicity ,
+          member.placeOfOrigin ,
+          member.isTransient,
+          member.houseOwner ,
+          member.transientRegistered,
+          formatDate(member.dateRegistered),
+          member.nonIvatanID,
+          member.populationID
+        ]
+      );
+
+    }
+
+    
     
     
     return console.log('[ UPDATED ] FAMILY PROFILE');

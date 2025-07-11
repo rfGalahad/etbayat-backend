@@ -11,17 +11,20 @@ import hazzardMapRoutes from './routes/hazzardMapRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import populationRoutes from './routes/populationRoutes.js';
 import databankRoutes from './routes/databankRoutes.js';
+import activityLogRoutes from './routes/activityLogRoutes.js';
+import duplicateRoutes from './routes/duplicateRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-//app.use(cors());
+app.use(cors());
 
+/*
 app.use(cors({
   origin: 'https://e-tbayatmswdo.com',
   credentials: true
 }));
-
+*/
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -38,6 +41,8 @@ app.use('/api/hazzardMap', hazzardMapRoutes );
 app.use('/api/dashboard', dashboardRoutes );
 app.use('/api/population', populationRoutes );
 app.use('/api/databank', databankRoutes);
+app.use('/api/activityLog', activityLogRoutes);
+app.use('/api/duplicate', duplicateRoutes);
 
 // Start server
 app.listen(PORT, () => {

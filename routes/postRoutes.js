@@ -7,6 +7,7 @@ const router = express.Router();
 
 
 router.get('/getPosts', postController.getPosts);
+router.get('/managePosts', postController.managePosts);
 router.get('/getPostImages', postController.getImages);
 
 router.get('/get/:id', postController.getPostById);
@@ -28,7 +29,6 @@ router.put('/update/:postID',
 );
 
 router.delete('/delete/:id', authenticateToken, postController.deletePost);
-router.post('/delete-multiple', authenticateToken, postController.deleteMultiplePosts);
 
 
 

@@ -1,5 +1,3 @@
-
-
 export const generateSurveyId = async (connection) => {
   // Get current date components
   const now = new Date();
@@ -43,18 +41,23 @@ export const generateSurveyId = async (connection) => {
   }
 };
 
-export const createSurvey = async (surveyID, surveyData, connection) => {
+export const createSurvey = async (surveyID, surveyData, photo, signature, connection) => {
+
+  console.log(photo ? 'Photo provided' : 'No photo provided');
+  console.log(signature ? 'Signature provided' : 'No signature provided');
 
   const [result] = await connection.query(
     `INSERT INTO Surveys 
-     (surveyID, respondent, interviewer, barangay, municipality)
-     VALUES (?, ?, ?, ?, ?)`,
+     (surveyID, respondent, interviewer, barangay, municipality, photo, signature)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       surveyID,
       surveyData.respondent,
       surveyData.interviewer,
       surveyData.barangay,
-      surveyData.municipality
+      surveyData.municipality,
+      photo || null,
+      signature || null
     ]
   );
   return result;
@@ -399,6 +402,7 @@ export const addMonthlyExpenses = async (surveyId, monthlyExpenses, connection) 
 };
 
 
+// HOUSE INFO
 export const addHouseInfo = async (surveyId, houseInfo, houseLocation, connection) => {
 
   await connection.query(

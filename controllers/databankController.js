@@ -76,7 +76,6 @@ export const getSegregation = async (req, res) => {
   }
 };
 
-
 export const getSegregationTotal = async (req, res) => {
 
   try {
@@ -414,7 +413,8 @@ export const getPWD = async (req, res) => {
       LEFT JOIN Surveys s ON h.surveyID = s.surveyID
       WHERE p.isPWD = TRUE
         AND p.age <= 59
-        AND ci.barangay = ?;
+        AND ci.barangay = ?
+        AND p.populationID IS NOT NULL;
     `, [ barangay ]);
     
     res.json(masterlist);

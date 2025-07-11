@@ -25,6 +25,23 @@ export const getPosts = async (req, res) => {
   }
 };
 
+export const managePosts = async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT * FROM Posts
+    `);
+    
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching posts', 
+      error: error.message 
+    });
+  }
+}
+
 export const getImages = async (req, res) => {
   try {
     const [posts] = await pool.query(`SELECT * FROM Posts`);
@@ -100,38 +117,9 @@ export const deletePost = async (req, res) => {
     await connection.query('DELETE FROM PostImages WHERE postID = ?', [postID]);
     await pool.query('DELETE FROM Posts WHERE postID = ?', [postID]);
 
-    return console.log('Post Deleted Succcesfully!');
+    return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Error deleting post:', error);
-    res.status(500).json({ message: 'Server error' });
-  } finally {
-    connection.release();
-  }
-};
-
-export const deleteMultiplePosts = async (req, res) => {
-  const { ids } = req.body; // Expects { ids: [14, 15, 16] }
-  const connection = await pool.getConnection();
-
-  try {
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ message: 'No IDs provided' });
-    }
-
-    await connection.beginTransaction();
-
-    // Delete all related images first
-    await connection.query('DELETE FROM PostImages WHERE postID IN (?)', [ids]);
-
-    // Then delete the posts
-    await connection.query('DELETE FROM Posts WHERE postID IN (?)', [ids]);
-
-    await connection.commit();
-
-    res.status(200).json({ message: `${ids.length} posts deleted successfully` });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Error deleting multiple posts:', error);
     res.status(500).json({ message: 'Server error' });
   } finally {
     connection.release();
