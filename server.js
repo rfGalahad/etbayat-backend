@@ -26,6 +26,13 @@ app.use(cors({
   credentials: true
 }));
 
+app.options('*', cors());
+
+app.use((req, res, next) => {
+  console.log(`Received ${req.method} request from ${req.headers.origin}`);
+  next();
+});
+
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
