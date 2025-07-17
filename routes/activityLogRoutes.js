@@ -1,6 +1,6 @@
 // routes/authRoutes.js - Authentication routes
 import express from 'express';
-import * as activityLogController from '../controllers/activityLogController.js';
+import * as activityLogController from '../controllers/activityLogController/index.js';
 
 const router = express.Router();
 

@@ -1,12 +1,12 @@
 // routes/surveyRoutes.js - Survey routes
 import express from 'express';
-import * as soloParentIDControllers from '../controllers/soloParentIDControllers.js';
+import * as soloParentIDControllers from '../controllers/soloParentIDController/index.js';
 import { authenticateToken } from '../middlewares/auth.js';
 import { uploadToMemory, processImageForDatabase } from '../middlewares/multer.js';
 
 const router = express.Router();
 
-router.get('/generate', authenticateToken, soloParentIDControllers.getNewSoloParentId);
+router.get('/generate', authenticateToken, soloParentIDControllers.createNewID);
 
 router.post('/submit', 
   authenticateToken, 
@@ -15,7 +15,7 @@ router.post('/submit',
     { name: 'signature', maxCount: 1 }
   ]), 
   processImageForDatabase,  
-  soloParentIDControllers.submitSoloParentID
+  soloParentIDControllers.createApplication
 );
 
 router.put('/update', 
@@ -25,17 +25,17 @@ router.put('/update',
     { name: 'signature', maxCount: 1 }
   ]), 
   processImageForDatabase,  
-  soloParentIDControllers.updateSoloParentID
+  soloParentIDControllers.updateApplication
 );
 
-router.get('/list', authenticateToken, soloParentIDControllers.manageSoloParentId);
+router.get('/list', authenticateToken, soloParentIDControllers.getAllApplications);
 
-router.get('/view/:spApplicationID', authenticateToken, soloParentIDControllers.viewApplication);
+router.get('/view/:spApplicationID', authenticateToken, soloParentIDControllers.getApplicationDetails);
 
 router.delete('/delete/:populationID/:spApplicationID', authenticateToken, soloParentIDControllers.deleteApplication);
 
-router.get('/get-personal-info/:populationID', authenticateToken, soloParentIDControllers.getPersonDetails);
+router.get('/get-personal-info/:populationID', authenticateToken, soloParentIDControllers.getPopulationDetails);
 
-router.post('/find', authenticateToken, soloParentIDControllers.findID);
+router.post('/find', authenticateToken, soloParentIDControllers.searchApplicants);
 
 export default router; 

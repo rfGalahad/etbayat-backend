@@ -1,11 +1,12 @@
 import express from 'express';
-import * as pwdIDControllers from '../controllers/pwdIDControllers.js';
+import * as pwdIDControllers from '../controllers/pwdIDController/index.js';
 import { authenticateToken } from '../middlewares/auth.js';
 import { uploadToMemory, processImageForDatabase } from '../middlewares/multer.js';
 
-const router = express.Router();
 
-//router.get('/generate', authenticateToken, pwdIDControllers.getNewPwdId);
+
+
+const router = express.Router();
 
 router.post('/submit', 
   authenticateToken,
@@ -14,7 +15,7 @@ router.post('/submit',
     { name: 'signature', maxCount: 1 }
   ]), 
   processImageForDatabase,  
-  pwdIDControllers.submitPwdId
+  pwdIDControllers.createPWDApplication
 );
 
 router.put('/update', 
@@ -24,18 +25,18 @@ router.put('/update',
     { name: 'signature', maxCount: 1 }
   ]), 
   processImageForDatabase,  
-  pwdIDControllers.updatePwdId
+  pwdIDControllers.updatePWDApplication
 );
 
-router.get('/list', authenticateToken, pwdIDControllers.managePwdId);
+router.get('/list', authenticateToken, pwdIDControllers.getAllPWDApplications);
 
-router.get('/view/:pwdApplicationID', authenticateToken, pwdIDControllers.viewApplication);
+router.get('/view/:pwdApplicationID', authenticateToken, pwdIDControllers.getPWDApplicationDetails);
 
-router.delete('/delete/:populationID/:pwdApplicationID', authenticateToken, pwdIDControllers.deleteApplication);
+router.delete('/delete/:populationID/:pwdApplicationID', authenticateToken, pwdIDControllers.deletePWDApplication);
 
-router.get('/get-personal-info/:populationID', authenticateToken, pwdIDControllers.getPersonDetails);
+router.get('/get-personal-info/:populationID', authenticateToken, pwdIDControllers.getPopulationDetails);
 
-router.post('/find', authenticateToken, pwdIDControllers.findPwdID);
+router.post('/find', authenticateToken, pwdIDControllers.searchPWDApplicants);
 
 
 

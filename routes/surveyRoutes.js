@@ -1,7 +1,6 @@
 // routes/surveyRoutes.js - Survey routes
 import express from 'express';
 import * as surveyController from '../controllers/surveyController/index.js';
-
 import { authenticateToken } from '../middlewares/auth.js';
 import { uploadToMemory, processImageForDatabase } from '../middlewares/multer.js';
 

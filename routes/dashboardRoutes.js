@@ -1,11 +1,11 @@
 import express from 'express';
-import * as dashboardController from '../controllers/dashboardController.js';
+import * as dashboardController from '../controllers/dashboardController/index.js';
 import { authenticateToken } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-router.get('/getTotal', dashboardController.getTotal);
-router.get('/barangayStats', dashboardController.getBarangayStats);
+router.get('/getTotal/:year', dashboardController.getTotal);
+router.get('/barangayStats/:year', dashboardController.getBarangayStats);
 
 
 

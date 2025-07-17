@@ -1,0 +1,93 @@
+import pool from '../../config/database.js';
+
+
+
+export const searchApplicants = async (req, res) => {
+
+  const connection = await pool.getConnection();
+  
+  try {
+    console.log('Finding Person ...');
+    console.log('Search params:', req.body);
+    
+    // Get search parameters from request body
+    const { firstName, middleName, lastName, suffix, birthdate, sex } = req.body;
+    
+    // Validate required parameters
+    if (!firstName || !lastName || !sex) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required search parameters'
+      });
+    }
+
+    const [results] = await connection.query(`
+      SELECT 
+        pi.personalInfoID,
+        pi.populationID,
+        pi.applicantID,
+        pi.seniorCitizenIDNumber,
+        pi.firstName,
+        pi.middleName,
+        pi.lastName,
+        pi.suffix,
+        pi.birthdate,
+        pi.sex,
+        pi.age,
+        CASE WHEN p.populationID IS NOT NULL THEN TRUE ELSE FALSE END AS existsInPopulation
+      FROM PersonalInformation pi
+      LEFT JOIN Population p ON pi.populationID = p.populationID
+      WHERE pi.firstName LIKE ?
+        AND (pi.middleName LIKE ? OR ? = '' OR pi.middleName IS NULL)
+        AND pi.lastName LIKE ?
+        AND (pi.suffix LIKE ? OR ? = '' OR pi.suffix IS NULL)
+        ${birthdate ? 'AND pi.birthdate = ?' : ''}
+        AND pi.sex = ?
+        AND pi.age >= 60
+      ORDER BY 
+        CASE WHEN pi.middleName = ? THEN 1 ELSE 2 END,
+        CASE WHEN pi.birthdate = ? THEN 1 ELSE 2 END
+    `, [
+      firstName,
+      middleName || '', middleName || '',
+      lastName,
+      suffix || '', suffix || '',
+      ...(birthdate ? [birthdate] : []),
+      sex,
+      middleName || '',
+      birthdate || null
+    ]);
+
+    console.log(`Found ${results.length} results`);
+
+    // Format the results
+    const population = results.map(person => ({
+      personalInfoID: person.personalInfoID,
+      populationID: person.populationID,
+      applicantID: person.applicantID,
+      seniorCitizenIDNumber: person.seniorCitizenIDNumber,
+      firstName: person.firstName,
+      middleName: person.middleName || 'N/A',
+      lastName: person.lastName,
+      suffix: person.suffix || 'N/A',
+      birthdate: person.birthdate,
+      sex: person.sex,
+      age: person.age
+    }));
+
+    res.status(200).json({ 
+      success: true,
+      population 
+    });
+
+  } catch (error) {
+    console.error('Error finding person:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error finding person', 
+      error: error.message 
+    });
+  } finally {
+    connection.release();
+  }
+};

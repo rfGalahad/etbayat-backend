@@ -29,7 +29,8 @@ export const checkDuplicates = async (req, res) => {
         pi.lastName,
         pi.birthdate,
         pi.sex,
-        s.barangay
+        s.barangay,
+        s.surveyID
       FROM PersonalInformation pi
       JOIN Population p ON pi.populationID = p.populationID
       JOIN Surveys s ON p.surveyID = s.surveyID
@@ -50,6 +51,7 @@ export const checkDuplicates = async (req, res) => {
         groups[key] = [];
       }
       groups[key].push({
+        surveyID: record.surveyID,
         id: record.personalInfoID,
         fullName: `${record.firstName} ${record.middleName || ''} ${record.lastName}`.replace(/\s+/g, ' ').trim(),
         gender: record.sex,

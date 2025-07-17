@@ -11,9 +11,6 @@ export const updateSurvey = async (req, res) => {
     await connection.beginTransaction();
 
     const surveyData = JSON.parse(req.body.surveyData);
-    console.log('Survey Data:', surveyData);
-    console.log('RESPONDENT MEDIA:', surveyData.respondentMedia);
-
     const surveyID = surveyData.surveyData.surveyID;
     const populationID = `P${surveyID}`;
     const hasHouseImageID = surveyData.houseInfo?.houseImages?.some(img => img.houseImageID != null);
